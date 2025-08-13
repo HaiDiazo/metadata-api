@@ -10,6 +10,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.HashMap;
+import java.util.Map;
+
 @RestController
 @RequestMapping("/metadata")
 @Tag(name = "Metadata Management")
@@ -41,6 +44,31 @@ public class MetadataController {
                 resultsData
         );
 
+        return ResponseEntity.ok(responseApi);
+    }
+
+    @GetMapping("/count")
+    public ResponseEntity<?> getTotalDataset(
+        @RequestParam(value = "", required = false) String region,
+        @RequestParam(value = "", required = false) String pathData,
+        @RequestParam(value = "", required = false) String source,
+        @RequestParam(value = "bronze", required = false) String medallion
+    ) {
+        long start = System.currentTimeMillis();
+
+        long resultCount = metadataService.getTotalDataset(
+            region, pathData, medallion, source
+        );
+
+        Map<String, Long> mapped = new HashMap<>();
+        mapped.put("totalData", resultCount);
+
+        ResponseApi<Map<String, Long>> responseApi = new ResponseApi<>(
+                HttpStatus.OK.value(),
+                (System.currentTimeMillis() - start) / 1000.0,
+                HttpStatus.OK.name(),
+                mapped
+        );
         return ResponseEntity.ok(responseApi);
     }
 }
