@@ -9,6 +9,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -19,6 +20,10 @@ public class AccountService {
 
     public AccountService(MongoAccountRepository mongoAccountRepository) {
         this.mongoAccountRepository = mongoAccountRepository;
+    }
+
+    public Optional<Account> findByUsername(String username) {
+        return mongoAccountRepository.findByUsername(username);
     }
 
     public List<AccountResponse> getAllAccounts() {
