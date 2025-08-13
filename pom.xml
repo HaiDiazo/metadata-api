@@ -37,6 +37,23 @@
             <version>${springdoc.version}</version>
         </dependency>
         <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-api</artifactId>
+            <version>0.11.5</version>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-impl</artifactId>
+            <version>0.11.5</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-jackson</artifactId>
+            <version>0.11.5</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
             <groupId>co.elastic.clients</groupId>
             <artifactId>elasticsearch-java</artifactId>
             <version>8.13.4</version> <!-- or the latest stable -->
@@ -59,38 +76,6 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-mongodb</artifactId>
         </dependency>
-<!--        <dependency>-->
-<!--            <groupId>org.springframework.data</groupId>-->
-<!--            <artifactId>spring-data-mongodb</artifactId>-->
-<!--            <version>4.4.1</version>-->
-<!--        </dependency>-->
-<!--        <dependency>-->
-<!--            <groupId>org.springframework.boot</groupId>-->
-<!--            <artifactId>spring-boot-starter-data-mongodb</artifactId>-->
-<!--            <exclusions>-->
-<!--                &lt;!&ndash; Exclude default Mongo driver &ndash;&gt;-->
-<!--                <exclusion>-->
-<!--                    <groupId>org.mongodb</groupId>-->
-<!--                    <artifactId>mongodb-driver-sync</artifactId>-->
-<!--                </exclusion>-->
-<!--            </exclusions>-->
-<!--        </dependency>-->
-<!--        <dependency>-->
-<!--            <groupId>org.springframework.data</groupId>-->
-<!--            <artifactId>spring-data-mongodb</artifactId>-->
-<!--            <version>3.4.15</version> &lt;!&ndash; Compatible with Mongo driver 3.12.x &ndash;&gt;-->
-<!--        </dependency>-->
-<!--        <dependency>-->
-<!--            <groupId>org.mongodb</groupId>-->
-<!--            <artifactId>mongodb-driver-sync</artifactId>-->
-<!--            <version>3.12.14</version>-->
-<!--        </dependency>-->
-
-<!--        <dependency>-->
-<!--            <groupId>org.mongodb</groupId>-->
-<!--            <artifactId>mongodb-driver-sync</artifactId>-->
-<!--            <version>3.12.14</version>-->
-<!--        </dependency>-->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
