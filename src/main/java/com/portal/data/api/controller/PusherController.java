@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/pusher")
-@Tag(name = "Pusher Metadata")
+@Tag(name = "Metadata Pusher")
 public class PusherController {
 
     private final MetadataService metadataService;

@@ -2,6 +2,10 @@ package com.portal.data.api.service;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch._types.SortOrder;
+import co.elastic.clients.elasticsearch._types.aggregations.Aggregate;
+import co.elastic.clients.elasticsearch._types.aggregations.CalendarInterval;
+import co.elastic.clients.elasticsearch._types.aggregations.DateHistogramAggregate;
+import co.elastic.clients.elasticsearch._types.aggregations.DateHistogramBucket;
 import co.elastic.clients.elasticsearch._types.query_dsl.PercolateQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
 import co.elastic.clients.elasticsearch.core.CountRequest;
@@ -9,17 +13,17 @@ import co.elastic.clients.elasticsearch.core.CountResponse;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
 import co.elastic.clients.elasticsearch.core.search.Hit;
 import co.elastic.clients.json.JsonData;
+import co.elastic.clients.util.NamedValue;
 import com.portal.data.api.dto.requests.MetadataRequest;
 import com.portal.data.api.dto.requests.PercolateRequest;
 import com.portal.data.api.utils.DataUtils;
+import jakarta.json.JsonObject;
+import jakarta.json.JsonValue;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 @Service
 public class MetadataService {
@@ -246,4 +250,64 @@ public class MetadataService {
             throw new RuntimeException(e);
         }
     }
+
+    public List<Map<String, Object>> getTimeseriesBySource(
+        String source,
+        String startDate,
+        String endDate
+    ) {
+        try {
+            Query query;
+            if (source != null) {
+                query = new Query.Builder().bool(bool -> bool
+                        .filter(filter -> filter
+                        .range(range -> range
+                        .field("crawling_time")
+                        .gte(JsonData.of(startDate))
+                        .lte(JsonData.of(endDate))
+                        .format("yyyy-MM-dd HH:mm:ss")))
+                        .must(must -> must
+                        .term(term -> term
+                        .field("source")
+                        .value(source)))).build();
+            } else {
+                query = new Query.Builder().bool(bool -> bool
+                        .filter(filter -> filter
+                        .range(range -> range
+                        .field("crawling_time")
+                        .gte(JsonData.of(startDate))
+                        .lte(JsonData.of(endDate))
+                        .format("yyyy-MM-dd HH:mm:ss")))).build();
+            }
+
+            SearchResponse<Map> response = elasticsearchClient.search(search -> search
+                    .index("portal-metadata-dataset")
+                    .query(query)
+                    .aggregations("range_date", aggregation -> aggregation
+                    .dateHistogram(dateHistogram -> dateHistogram
+                    .field("crawling_time")
+                    .calendarInterval(CalendarInterval.Day)
+                    .format("yyyy-MM-dd")
+                    .order(NamedValue.of("_key", SortOrder.Desc)))),
+                    Map.class
+            );
+
+            Aggregate aggregateMap = response.aggregations().get("range_date");
+            DateHistogramAggregate dateHistogram = aggregateMap.dateHistogram();
+
+            List<Map<String, Object>> results = new ArrayList<>();
+            for (DateHistogramBucket bucket: dateHistogram.buckets().array()) {
+                Map<String, Object> mapped = new HashMap<>();
+                mapped.put("date", bucket.keyAsString());
+                mapped.put("value", bucket.docCount());
+
+                results.add(mapped);
+            }
+
+            return results;
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
 }
