@@ -2,10 +2,7 @@ package com.portal.data.api.service;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch._types.SortOrder;
-import co.elastic.clients.elasticsearch._types.aggregations.Aggregate;
-import co.elastic.clients.elasticsearch._types.aggregations.CalendarInterval;
-import co.elastic.clients.elasticsearch._types.aggregations.DateHistogramAggregate;
-import co.elastic.clients.elasticsearch._types.aggregations.DateHistogramBucket;
+import co.elastic.clients.elasticsearch._types.aggregations.*;
 import co.elastic.clients.elasticsearch._types.query_dsl.PercolateQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
 import co.elastic.clients.elasticsearch.core.CountRequest;
@@ -16,9 +13,8 @@ import co.elastic.clients.json.JsonData;
 import co.elastic.clients.util.NamedValue;
 import com.portal.data.api.dto.requests.MetadataRequest;
 import com.portal.data.api.dto.requests.PercolateRequest;
+import com.portal.data.api.dto.response.MetadataStandarization;
 import com.portal.data.api.utils.DataUtils;
-import jakarta.json.JsonObject;
-import jakarta.json.JsonValue;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
@@ -310,4 +306,69 @@ public class MetadataService {
         }
     }
 
+    public List<Map<String, String>> getTypeStandarization() {
+        try {
+            SearchResponse<Map> response = elasticsearchClientPercolate.search(search -> search
+                    .index("portal-metadata-standarization")
+                    .size(0)
+                    .aggregations("type_collect", aggregation -> aggregation
+                    .terms(term -> term
+                    .field("type"))), Map.class);
+
+            Aggregate aggregateMap = response.aggregations().get("type_collect");
+            StringTermsAggregate termsAggregate = aggregateMap.sterms();
+
+            List<Map<String, String>> resultsMapped = new ArrayList<>();
+            for (StringTermsBucket termsBucket: termsAggregate.buckets().array()) {
+
+                Map<String, String> mapped = new HashMap<>();
+
+                String key = termsBucket.key().stringValue();
+                mapped.put("key", key);
+                resultsMapped.add(mapped);
+            }
+            return resultsMapped;
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public List<MetadataStandarization> getStandarization(String type) {
+        try {
+            Query query;
+            if (type != null) {
+                query = new Query.Builder().bool(bool -> bool
+                        .must(must -> must
+                        .term(term -> term
+                        .field("type")
+                        .value(type)))).build();
+            } else {
+                query = new Query.Builder().matchAll(match -> match).build();
+            }
+
+            SearchResponse<Map> response = elasticsearchClientPercolate.search(search -> search
+                    .index("portal-metadata-standarization")
+                    .size(100)
+                    .query(query),
+                    Map.class);
+
+
+            return response.hits().hits().stream().map(mapHit -> {
+                if (mapHit.source() != null) {
+                    Map<String, Object> fieldQuery = (Map<String, Object>) mapHit.source().get("query");
+                    Map<String, Object> queryString = (Map<String, Object>) fieldQuery.get("query_string");
+
+                    return new MetadataStandarization(
+                        mapHit.id(),
+                        String.valueOf(mapHit.source().get("type")),
+                        String.valueOf(mapHit.source().get("standarization")),
+                        String.valueOf(queryString.get("query"))
+                    );
+                }
+                return null;
+            }).toList();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
 }

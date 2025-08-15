@@ -1,10 +1,10 @@
 package com.portal.data.api.controller;
 
+import com.portal.data.api.dto.response.MetadataStandarization;
 import com.portal.data.api.dto.response.ResponseApi;
 import com.portal.data.api.service.MetadataService;
 import com.portal.data.api.utils.DataUtils;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -45,6 +45,40 @@ public class MetadataController {
                 (System.currentTimeMillis() - start) / 1000.0,
                 HttpStatus.OK.name(),
                 resultsData
+        );
+
+        return ResponseEntity.ok(responseApi);
+    }
+
+    @GetMapping("/get-type-standarization")
+    public ResponseEntity<?> getTypeStandarization() {
+        long start = System.currentTimeMillis();
+
+        List<Map<String, String>> results = metadataService.getTypeStandarization();
+
+        ResponseApi<List<Map<String, String>>> responseApi = new ResponseApi<>(
+                HttpStatus.OK.value(),
+                (System.currentTimeMillis() - start) / 1000.0,
+                HttpStatus.OK.name(),
+                results
+        );
+
+        return ResponseEntity.ok(responseApi);
+    }
+
+    @GetMapping("/get-standarization")
+    public ResponseEntity<?> getStandarization(
+        @RequestParam String type
+    ) {
+        long start = System.currentTimeMillis();
+
+        List<MetadataStandarization> results = metadataService.getStandarization(type);
+
+        ResponseApi<List<MetadataStandarization>> responseApi = new ResponseApi<>(
+                HttpStatus.OK.value(),
+                (System.currentTimeMillis() - start) / 1000.0,
+                HttpStatus.OK.name(),
+                results
         );
 
         return ResponseEntity.ok(responseApi);
