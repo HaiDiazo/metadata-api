@@ -36,6 +36,14 @@ public class MetadataService {
 
     public record SearchResult(Long totalHits, List<Map> hits) {}
 
+    public record StandarizationResult(boolean isStandarization, String reason) {}
+
+    public record MetadataReasonStandarization(
+            boolean isStandarization,
+            String reasonStandarization,
+            MetadataRequest metadataRequest
+    ) {}
+
     private Integer parseSimple(Object obj) {
         if (obj == null) return null;
         if (obj instanceof Number) {
@@ -50,7 +58,7 @@ public class MetadataService {
         return null;
     }
 
-    private void standarizationEs(String raw, String typeStandarization, MetadataRequest metadataRequest) {
+    private StandarizationResult standarizationEs(String raw, String typeStandarization, MetadataRequest metadataRequest) {
 
         PercolateQuery percolateQuery;
         if (!typeStandarization.equals("content_type")) {
@@ -82,6 +90,21 @@ public class MetadataService {
                     .stream()
                     .filter(Objects::nonNull)
                     .toList();
+
+            if (hits.isEmpty() && raw != null) {
+                return new StandarizationResult(
+                        false,
+                        "Found not standarization in %s with value %s".formatted(typeStandarization, raw)
+                );
+            } else if (hits.isEmpty()) {
+                return new StandarizationResult(
+                        false,
+                        "Found not standarization in %s with value %s".formatted(
+                                typeStandarization,
+                                metadataRequest.getContentType().toString()
+                        )
+                );
+            }
 
             for (Hit hit: hits) {
                 int docSlot = 0;
@@ -124,19 +147,61 @@ public class MetadataService {
                     break;
                 }
             }
+            return new StandarizationResult(
+                    true,
+                    ""
+            );
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
 
-    public MetadataRequest getStandarizationMetadata(MetadataRequest metadataRequest) {
+    public MetadataReasonStandarization getStandarizationMetadata(MetadataRequest metadataRequest) {
 
-        standarizationEs(metadataRequest.getRegion(), "region", metadataRequest);
-        standarizationEs(metadataRequest.getCrawlMethod(), "crawl_method", metadataRequest);
-        standarizationEs(metadataRequest.getScheduleInterval(), "schedule_interval", metadataRequest);
-        standarizationEs(metadataRequest.getLevel(), "level", metadataRequest);
-        standarizationEs(null, "content_type", metadataRequest);
-        return metadataRequest;
+        StandarizationResult res;
+        boolean isStandarization = true;
+        StringBuilder reason = new StringBuilder();
+
+        res = standarizationEs(metadataRequest.getRegion(), "region", metadataRequest);
+        if (!res.isStandarization) {
+            isStandarization = false;
+            reason.append(" ").append(res.reason);
+        }
+
+        res = standarizationEs(metadataRequest.getCrawlMethod(), "crawl_method", metadataRequest);
+        if (!res.isStandarization) {
+            isStandarization = false;
+            reason.append(" ").append(res.reason);
+        }
+
+        res = standarizationEs(metadataRequest.getScheduleInterval(), "schedule_interval", metadataRequest);
+        if (!res.isStandarization) {
+            isStandarization = false;
+            reason.append(" ").append(res.reason);
+        }
+
+        res = standarizationEs(metadataRequest.getLevel(), "level", metadataRequest);
+        if (!res.isStandarization) {
+            isStandarization = false;
+            reason.append(" ").append(res.reason);
+        }
+
+        res = standarizationEs(null, "content_type", metadataRequest);
+        if (!res.isStandarization) {
+            isStandarization = false;
+            reason.append(" ").append(res.reason);
+        }
+
+        if (!reason.isEmpty()) {
+            isStandarization = false;
+            reason.append(" ").append("Not Sending Into Queue");
+        }
+
+        return new MetadataReasonStandarization(
+                isStandarization,
+                reason.toString(),
+                metadataRequest
+        );
     }
 
     private void queryMustClauses(List<Query> mustClauses, String value, String type) {

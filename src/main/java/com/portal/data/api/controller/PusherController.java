@@ -27,15 +27,24 @@ public class PusherController {
         @RequestBody MetadataRequest metadataRequest
     ) {
         long start = System.currentTimeMillis();
-        MetadataRequest result = metadataService.getStandarizationMetadata(metadataRequest);
+        MetadataService.MetadataReasonStandarization result = metadataService.getStandarizationMetadata(metadataRequest);
+
+        if (result.isStandarization()) {
+            ResponseApi<MetadataRequest> responseApi = new ResponseApi<>(
+                    HttpStatus.OK.value(),
+                    (System.currentTimeMillis() - start) / 1000.0,
+                    HttpStatus.OK.name(),
+                    result.metadataRequest()
+            );
+            return ResponseEntity.ok(responseApi);
+        }
 
         ResponseApi<MetadataRequest> responseApi = new ResponseApi<>(
-                HttpStatus.OK.value(),
+                HttpStatus.UNPROCESSABLE_ENTITY.value(),
                 (System.currentTimeMillis() - start) / 1000.0,
-                HttpStatus.OK.name(),
-                result
+                result.reasonStandarization(),
+                result.metadataRequest()
         );
-
-        return ResponseEntity.ok(responseApi);
+        return ResponseEntity.unprocessableEntity().body(responseApi);
     }
 }
