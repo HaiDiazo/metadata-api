@@ -4,6 +4,7 @@ import com.portal.data.api.dto.requests.MetadataRequest;
 import com.portal.data.api.dto.response.ResponseApi;
 import com.portal.data.api.service.MetadataService;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -27,7 +28,7 @@ public class PusherController {
 
     @PostMapping("")
     public ResponseEntity<?> pusher(
-        @RequestBody MetadataRequest metadataRequest
+       @Valid @RequestBody MetadataRequest metadataRequest
     ) {
         long start = System.currentTimeMillis();
         MetadataService.MetadataReasonStandarization result = null;
