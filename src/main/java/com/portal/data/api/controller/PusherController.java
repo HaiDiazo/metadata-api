@@ -11,6 +11,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.io.IOException;
+import java.util.Arrays;
+
 @RestController
 @RequestMapping("/pusher")
 @Tag(name = "Metadata Pusher")
@@ -27,24 +30,36 @@ public class PusherController {
         @RequestBody MetadataRequest metadataRequest
     ) {
         long start = System.currentTimeMillis();
-        MetadataService.MetadataReasonStandarization result = metadataService.getStandarizationMetadata(metadataRequest);
+        MetadataService.MetadataReasonStandarization result = null;
+        try {
+            result = metadataService.getStandarizationMetadata(metadataRequest);
+            if (result.isStandarization()) {
+                ResponseApi<MetadataRequest> responseApi = new ResponseApi<>(
+                        HttpStatus.OK.value(),
+                        (System.currentTimeMillis() - start) / 1000.0,
+                        HttpStatus.OK.name(),
+                        result.metadataRequest()
+                );
+                return ResponseEntity.ok(responseApi);
+            }
 
-        if (result.isStandarization()) {
             ResponseApi<MetadataRequest> responseApi = new ResponseApi<>(
-                    HttpStatus.OK.value(),
+                    HttpStatus.UNPROCESSABLE_ENTITY.value(),
                     (System.currentTimeMillis() - start) / 1000.0,
-                    HttpStatus.OK.name(),
+                    result.reasonStandarization(),
                     result.metadataRequest()
             );
-            return ResponseEntity.ok(responseApi);
-        }
+            return ResponseEntity.unprocessableEntity().body(responseApi);
 
-        ResponseApi<MetadataRequest> responseApi = new ResponseApi<>(
-                HttpStatus.UNPROCESSABLE_ENTITY.value(),
-                (System.currentTimeMillis() - start) / 1000.0,
-                result.reasonStandarization(),
-                result.metadataRequest()
-        );
-        return ResponseEntity.unprocessableEntity().body(responseApi);
+        } catch (IOException e) {
+
+            ResponseApi<MetadataRequest> responseApi = new ResponseApi<>(
+                    HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                    (System.currentTimeMillis() - start) / 1000.0,
+                    e.getMessage() + " " + e.getCause(),
+                    null
+            );
+            return ResponseEntity.internalServerError().body(responseApi);
+        }
     }
 }

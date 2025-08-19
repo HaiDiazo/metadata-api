@@ -58,7 +58,7 @@ public class MetadataService {
         return null;
     }
 
-    private StandarizationResult standarizationEs(String raw, String typeStandarization, MetadataRequest metadataRequest) {
+    private StandarizationResult standarizationEs(String raw, String typeStandarization, MetadataRequest metadataRequest) throws IOException {
 
         PercolateQuery percolateQuery;
         if (!typeStandarization.equals("content_type")) {
@@ -76,87 +76,84 @@ public class MetadataService {
                     .field("query")
                     .documents(percolateRequests));
         }
-        try {
-            SearchResponse<Map> response = elasticsearchClientPercolate.search(search -> search
-                        .index("portal-metadata-standarization")
-                        .query(query -> query
-                        .bool(bool -> bool
-                        .filter(filter -> filter
-                        .term(term -> term.field("type").value(typeStandarization)))
-                        .must(must -> must
-                        .percolate(percolateQuery)))), Map.class
-            );
-            List<Hit<Map>>hits = response.hits().hits()
-                    .stream()
-                    .filter(Objects::nonNull)
-                    .toList();
 
-            if (hits.isEmpty() && raw != null) {
-                return new StandarizationResult(
-                        false,
-                        "Found not standarization in %s with value %s".formatted(typeStandarization, raw)
-                );
-            } else if (hits.isEmpty()) {
-                return new StandarizationResult(
-                        false,
-                        "Found not standarization in %s with value %s".formatted(
-                                typeStandarization,
-                                metadataRequest.getContentType().toString()
-                        )
-                );
-            }
+        SearchResponse<Map> response = elasticsearchClientPercolate.search(search -> search
+                    .index("portal-metadata-standarization")
+                    .query(query -> query
+                    .bool(bool -> bool
+                    .filter(filter -> filter
+                    .term(term -> term.field("type").value(typeStandarization)))
+                    .must(must -> must
+                    .percolate(percolateQuery)))), Map.class
+        );
+        List<Hit<Map>>hits = response.hits().hits()
+                .stream()
+                .filter(Objects::nonNull)
+                .toList();
 
-            for (Hit hit: hits) {
-                int docSlot = 0;
-
-                Map source = (Map) hit.source();
-                JsonData slotData = (JsonData) hit.fields().get("_percolator_document_slot");
-                if (slotData != null) {
-                    Object slotRaw = slotData.to(Object.class);
-                    if (slotRaw instanceof List) {
-                        List<?> list = (List<?>) slotRaw;
-                        if (!list.isEmpty()) {
-                            docSlot = (int) list.get(0);
-                        }
-                    }
-                }
-
-                if (source != null) {
-                    String standarization = source.get("standarization").toString();
-                    switch (typeStandarization) {
-                        case "region":
-                            metadataRequest.setRegion(standarization);
-                            break;
-                        case "level":
-                            metadataRequest.setLevel(standarization);
-                            break;
-                        case "crawl_method":
-                            metadataRequest.setCrawlMethod(standarization);
-                            break;
-                        case "schedule_interval":
-                            metadataRequest.setScheduleInterval(standarization);
-                            break;
-                        case "content_type":
-                            List<String> contentType = metadataRequest.getContentType();
-                            contentType.set(docSlot, standarization);
-                            metadataRequest.setContentType(contentType);
-                            break;
-                    }
-                }
-                if (!typeStandarization.equals("content_type")) {
-                    break;
-                }
-            }
+        if (hits.isEmpty() && raw != null) {
             return new StandarizationResult(
-                    true,
-                    ""
+                    false,
+                    "Found not standarization in %s with value %s".formatted(typeStandarization, raw)
             );
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+        } else if (hits.isEmpty()) {
+            return new StandarizationResult(
+                    false,
+                    "Found not standarization in %s with value %s".formatted(
+                            typeStandarization,
+                            metadataRequest.getContentType().toString()
+                    )
+            );
         }
+
+        for (Hit hit: hits) {
+            int docSlot = 0;
+
+            Map source = (Map) hit.source();
+            JsonData slotData = (JsonData) hit.fields().get("_percolator_document_slot");
+            if (slotData != null) {
+                Object slotRaw = slotData.to(Object.class);
+                if (slotRaw instanceof List) {
+                    List<?> list = (List<?>) slotRaw;
+                    if (!list.isEmpty()) {
+                        docSlot = (int) list.get(0);
+                    }
+                }
+            }
+
+            if (source != null) {
+                String standarization = source.get("standarization").toString();
+                switch (typeStandarization) {
+                    case "region":
+                        metadataRequest.setRegion(standarization);
+                        break;
+                    case "level":
+                        metadataRequest.setLevel(standarization);
+                        break;
+                    case "crawl_method":
+                        metadataRequest.setCrawlMethod(standarization);
+                        break;
+                    case "schedule_interval":
+                        metadataRequest.setScheduleInterval(standarization);
+                        break;
+                    case "content_type":
+                        List<String> contentType = metadataRequest.getContentType();
+                        contentType.set(docSlot, standarization);
+                        metadataRequest.setContentType(contentType);
+                        break;
+                }
+            }
+            if (!typeStandarization.equals("content_type")) {
+                break;
+            }
+        }
+        return new StandarizationResult(
+                true,
+                ""
+        );
     }
 
-    public MetadataReasonStandarization getStandarizationMetadata(MetadataRequest metadataRequest) {
+    public MetadataReasonStandarization getStandarizationMetadata(MetadataRequest metadataRequest) throws IOException {
 
         StandarizationResult res;
         boolean isStandarization = true;
@@ -165,36 +162,36 @@ public class MetadataService {
         res = standarizationEs(metadataRequest.getRegion(), "region", metadataRequest);
         if (!res.isStandarization) {
             isStandarization = false;
-            reason.append(" ").append(res.reason);
+            reason.append(", ").append(res.reason);
         }
 
         res = standarizationEs(metadataRequest.getCrawlMethod(), "crawl_method", metadataRequest);
         if (!res.isStandarization) {
             isStandarization = false;
-            reason.append(" ").append(res.reason);
+            reason.append(", ").append(res.reason);
         }
 
         res = standarizationEs(metadataRequest.getScheduleInterval(), "schedule_interval", metadataRequest);
         if (!res.isStandarization) {
             isStandarization = false;
-            reason.append(" ").append(res.reason);
+            reason.append(", ").append(res.reason);
         }
 
         res = standarizationEs(metadataRequest.getLevel(), "level", metadataRequest);
         if (!res.isStandarization) {
             isStandarization = false;
-            reason.append(" ").append(res.reason);
+            reason.append(", ").append(res.reason);
         }
 
         res = standarizationEs(null, "content_type", metadataRequest);
         if (!res.isStandarization) {
             isStandarization = false;
-            reason.append(" ").append(res.reason);
+            reason.append(", ").append(res.reason);
         }
 
         if (!reason.isEmpty()) {
             isStandarization = false;
-            reason.append(" ").append("Not Sending Into Queue");
+            reason.append(", ").append("Not Sending Into Queue");
         }
 
         return new MetadataReasonStandarization(
