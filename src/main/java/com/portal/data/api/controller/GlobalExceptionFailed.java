@@ -11,9 +11,9 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import java.util.HashMap;
 import java.util.Map;
 
-@ControllerAdvice
+//@ControllerAdvice
 public class GlobalExceptionFailed {
-    @ExceptionHandler(MethodArgumentNotValidException.class)
+//    @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<?> handleValidationExceptions(MethodArgumentNotValidException ex) {
         Map<String, String> errors = new HashMap<>();
         ex.getBindingResult().getFieldErrors().forEach(error ->

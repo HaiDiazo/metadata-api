@@ -26,7 +26,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         String path = request.getServletPath();
         return path.startsWith("/auth/login") ||
                 path.startsWith("/swagger-ui") ||
-                path.startsWith("/v3/api-docs") ||
+                path.startsWith("/api-docs") ||
                 path.startsWith("/swagger-resources") ||
                 path.startsWith("/webjars");
     }
@@ -54,6 +54,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                     SecurityContextHolder.getContext().setAuthentication(authentication);
                 }
             } catch (Exception e) {
+                System.out.println(e.toString());
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                 return;
             }
